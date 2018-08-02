@@ -4,6 +4,8 @@ import rospy
 from std_msgs.msg import String
 import tf
 
+BASE = "base_link"
+
 
 def message_builder(link_dict):
     """
@@ -12,6 +14,7 @@ def message_builder(link_dict):
     Returns:
         msg (string): the message
     """
+
     msg = ""
     for k, v in link_dict.iteritems():
         trans, rot = v
@@ -30,8 +33,8 @@ def get_transform(link, tf_listener):
         link (string): name of the link to get transform of
     """
     try:
-        t = tf_listener.getLatestCommonTime("base", link)
-        (trans, rot) = tf_listener.lookupTransform('base', link, t)
+        t = tf_listener.getLatestCommonTime(BASE, link)
+        (trans, rot) = tf_listener.lookupTransform(BASE, link, t)
     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException, tf.Exception) as e:
         print e
         return
@@ -68,6 +71,9 @@ def main():
     while not rospy.is_shutdown():
         for link in link_dict:
             link_dict[link] = get_transform(link, tf_listener)
+
+        print link_dict
+
         pub_string = message_builder(link_dict)
         pub.publish(pub_string)
         rate.sleep()
