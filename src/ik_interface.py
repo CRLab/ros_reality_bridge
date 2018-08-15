@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
-from GripperController import *
+from FetchController import *
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 
 from std_msgs.msg import Header, String
@@ -53,6 +53,7 @@ def gripper_handler(msg):
     if 'openGripper' in msg:
         rospy.loginfo('Opening gripper.')
         gripper.open()
+        gripper.move(10.1, 10.1, 0)
     if 'closeGripper' in msg:
         rospy.loginfo('Closing gripper.')
         gripper.close()
@@ -71,7 +72,7 @@ def main():
     global ik_fail_pub, gripper
 
     rospy.init_node('ros_reality_ik_interface')
-    gripper = GripperController()
+    gripper = FetchController()
 
     ik_fail_pub = rospy.Publisher('ros_reality_ik_status', String, queue_size=0)
 
