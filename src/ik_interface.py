@@ -1,85 +1,54 @@
 #!/usr/bin/env python
 
 import rospy
-from FetchController import *
-from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
-
+from FetchController import FetchController
 from std_msgs.msg import Header, String
 
 
-def ik_solve(limb, point, quaternion):
-    pass
-    # ns = "ExternalTools/" + limb + "/PositionKinematicsNode/IKService"
-    # iksvc = rospy.ServiceProxy(ns, SolvePositionIK)
-    # ikreq = SolvePositionIKRequest()
+class IKInterface():
 
-    # hdr = Header(stamp=rospy.Time.now(), frame_id='base')
-    # poses = {
-    #     str(limb): PoseStamped(header=hdr,
-    #         pose=Pose(position=point, orientation=quaternion))}
-    # ikreq.pose_stamp.append(poses[limb])
-    # try:
-    #     #rospy.wait_for_service(ns, 0.5)
-    #     resp = iksvc(ikreq)
-    # except (rospy.ServiceException, rospy.ROSException), e:
-    #     rospy.logerr("Service call failed: %s" % (e,))
-    #     return 0
-    # if (resp.isValid[0]):
-    #     # Format solution into Limb API-compatible dictionary
-    #     limb_joints = dict(zip(resp.joints[0].name, resp.joints[0].position))
-    #     return limb_joints
-    # else:
-    #     return 0
+    def __init__(self):
+        rospy.init_node('ros_reality_ik_interface')
+        self.fetch = FetchController()
 
-def ik_handler(limb, msg):
-    pass
-    # remove the moveToEEPose at the end, and convert each string to float
-    # msg_split = msg.strip().split(' ')
-    # if len(msg_split) < 3:
-    #     return
-    # x, y, z, qx, qy, qz, qw = [float(elem) for elem in msg_split[0:7]]
-    # limb_joints = ik_solve(limb, Point(x, y, z), Quaternion(qx, qy, qz, qw))
-    # if limb_joints:
-    #     if limb == 'right':
-    #         right_limb.set_joint_positions(limb_joints)
-    #     else:
-    #         left_limb.set_joint_positions(limb_joints)
-    # else:
-    #     ik_fail_pub.publish('f')
+        rospy.Subscriber('/forth_commands', String, self.pose_request_callback)
+        rospy.spin()
 
-def gripper_handler(msg):
-    global gripper
+    def __get_coords(self, data):
+        coords = data.split(",")
+        return map(float, coords)
 
-    if 'openGripper' in msg:
-        rospy.loginfo('Opening gripper.')
-        gripper.open()
-        gripper.move(10.1, 10.1, 0)
-    if 'closeGripper' in msg:
-        rospy.loginfo('Closing gripper.')
-        gripper.close()
+    def pose_request_callback(self, data):
+        msg = data.data
+        split_msg = msg.split("^")
+        rospy.loginfo(split_msg)
 
-def pose_request_callback(data):
-    msg = data.data
+        if split_msg is None or len(split_msg) == 0:
+            rospy.logerr("Invalid message format")
 
-    # call handle ik
-    # ik_handler(limb, msg)
+        request = split_msg[0]
 
-    # call gripper handler
-    gripper_handler(msg)
-    
+        if request == "openGripper":
+            self.fetch.open()
 
-def main():
-    global ik_fail_pub, gripper
+        elif request == "closeGripper":
+            self.fetch.close()
 
-    rospy.init_node('ros_reality_ik_interface')
-    gripper = FetchController()
+        elif request == "move":
+            coords = self.__get_coords(split_msg[1])
+            self.fetch.move(coords[0], coords[1])
 
-    ik_fail_pub = rospy.Publisher('ros_reality_ik_status', String, queue_size=0)
+        elif request == "moveTo":
+            coords = self.__get_coords(split_msg[1])
+            self.fetch.move_to(coords[0], coords[1])
 
-    rospy.Subscriber('/forth_commands', String, pose_request_callback)
+        elif request == "rotate":
+            self.fetch.rotate(float(split_msg[1]))
 
-    rospy.spin()
+        elif request == "rotateTo":
+            self.fetch.rotate_to(float(split_msg[1]))
+
 
 
 if __name__ == '__main__':
-    main()
+    _ = IKInterface()
