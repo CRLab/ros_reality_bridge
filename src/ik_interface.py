@@ -48,6 +48,8 @@ class IKInterface():
         elif request == "rotateTo":
             self.fetch.rotate_to(float(split_msg[1]))
 
+        elif request == "cancelMove":
+            self.fetch.cancel_move()
 
 
 if __name__ == '__main__':

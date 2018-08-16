@@ -85,6 +85,7 @@ class FetchController(object):
 
     # move to a new position. trans = [x,y,z] and rot = [x,y,z,w]
     def __move_to(self, trans, rot, frame):
+        # self.move_client.cancel_all_goals()
 
         # set a new position to move to
         move_goal = MoveBaseGoal()
@@ -101,7 +102,7 @@ class FetchController(object):
 
         # move
         self.move_client.send_goal(move_goal)
-        self.move_client.wait_for_result()
+        # self.move_client.wait_for_result()
 
     # Add the desired translation and rotation to the current pose. rotation in euler. Returns rotation in quaternion
     def __combine_pose(self, trans, rot, frame):
@@ -166,3 +167,7 @@ class FetchController(object):
         rospy.loginfo('Closing gripper...')
         self.__set_position(self.CLOSED_POSITION)
         rospy.loginfo('Gripper closed.')
+
+    # Stop all movement
+    def cancel_move(self):
+        self.move_client.cancel_all_goals()
