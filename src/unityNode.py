@@ -4,7 +4,7 @@ import rospy
 from std_msgs.msg import String
 import tf
 
-BASE = "base_link"
+BASE = "map"
 
 
 def message_builder(link_dict):
