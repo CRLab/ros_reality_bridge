@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from threading import Lock
-import math
 import rospy
 import actionlib
 from control_msgs.msg import GripperCommandAction, GripperCommandGoal
@@ -11,6 +10,10 @@ from tf import TransformListener, transformations
 import tf2_ros
 import tf_conversions
 import tf2_kdl
+import geometry_msgs.msg
+from moveit_python import MoveGroupInterface, PlanningSceneInterface
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
+from moveit_msgs.msg import MoveItErrorCodes
 
 
 class FetchController(object):
@@ -19,15 +22,20 @@ class FetchController(object):
     CLOSED_POSITION = 0
     MAP = "/map"
     BASE = "/base_link"
+    ARM = "arm_with_torso"
 
     def __init__(self):
         self._lock = Lock()
 
         self.tf = TransformListener()
 
+        # setup gripper
         self.max_effort = 20.0
         self.position = None
         self._sub_pos = rospy.Subscriber('joint_states', JointState, self.__set_state)
+
+        # moveit setup
+        self.move_group = MoveGroupInterface(self.ARM, self.MAP)
 
         # setup controller clients
         self.gripper_client = actionlib.SimpleActionClient('gripper_controller/gripper_action', GripperCommandAction)
@@ -38,6 +46,9 @@ class FetchController(object):
         self.gripper_client.wait_for_server()
         self.move_client.wait_for_server()
         rospy.loginfo('connected to controllers.')
+
+    def __del__(self):
+        self.move_group.get_move_action().cancel_all_goals()    # cancel moveit goals
 
     def __set_state(self, joint_state):
         l_gripper_finger_pos = None
@@ -50,6 +61,37 @@ class FetchController(object):
         with self._lock:
             self.position = l_gripper_finger_pos + r_gripper_finger_pos
 
+    # move the gripper to an end goal. pos = [x,y,z] rot = [x,y,z,w]
+    def __move_gripper(self, pos, rot):
+        # create pose
+        pose = geometry_msgs.msg.Pose()
+        pose.orientation.x = rot[0]
+        pose.orientation.y = rot[1]
+        pose.orientation.z = rot[2]
+        pose.orientation.w = rot[3]
+        pose.position.x = pos[0]
+        pose.position.y = pos[1]
+        pose.position.z = pos[2]
+
+        gripper_frame = 'wrist_roll_link'
+        gripper_pose_stamped = PoseStamped()
+        gripper_pose_stamped.header.frame_id = self.MAP
+        gripper_pose_stamped.header.stamp = rospy.Time.now()
+        gripper_pose_stamped.pose = pose
+
+        # Move gripper frame to the pose specified
+        self.move_group.moveToPose(gripper_pose_stamped, gripper_frame)
+        result = self.move_group.get_move_action().get_result()
+
+        # error checking
+        if result:
+            if result.error_code.val != MoveItErrorCodes.SUCCESS:
+                rospy.logerr("Arm goal in state: %s", self.move_group.get_move_action().get_state())
+        else:
+            rospy.logerr("MoveIt! failure no result returned.")
+
+
+    # set position of gripper
     def __set_position(self, position):
         goal = GripperCommandGoal()
         goal.command.max_effort = self.max_effort
@@ -150,11 +192,16 @@ class FetchController(object):
         rospy.loginfo('Done rotating.')
 
     # rotate to a specified angle
-    def rotate_to(self, theta):
+    def rotate_to(self, quat):
         rospy.loginfo('Rotating...')
 
-        rot = transformations.quaternion_from_euler(0, 0, theta)
-        self.__move_to([0, 0, 0], rot, self.MAP)
+        curr_trans, _ = self.__get_transform(self.MAP, self.BASE)
+
+        # only rotate about z axis
+        euler = transformations.euler_from_quaternion(quat)
+        z_rot = transformations.quaternion_from_euler(0, 0, euler[2])
+
+        self.__move_to(curr_trans, z_rot, self.MAP)
 
         rospy.loginfo('Done rotating.')
 
@@ -170,4 +217,12 @@ class FetchController(object):
 
     # Stop all movement
     def cancel_move(self):
-        self.move_client.cancel_all_goals()
+        self.move_client.cancel_all_goals()     # cancel base movement
+        self.move_group.get_move_action().cancel_all_goals()    # cancel moveit goals
+
+    # move the gripper to an end goal. pos = [x,y,z] rot = [x,y,z,w]
+    def move_gripper(self, pos, rot):
+        rospy.loginfo('Moving gripper...')
+        self.__move_gripper(pos, rot)
+        rospy.loginfo('Gripper moved.')
+
