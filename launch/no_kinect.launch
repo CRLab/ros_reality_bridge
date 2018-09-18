@@ -1,14 +1,15 @@
 <launch>
 <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
 
-<!--
-<node name="left_gripper_urdf_update_node" pkg="baxter_examples" type="send_urdf_fragment.py" args="-f $(find ros_reality_bridge)/urdf/left_end_effector.xacro -l left_hand -j left_gripper_base" />
-<node name="right_gripper_urdf_update_node" pkg="baxter_examples" type="send_urdf_fragment.py" args="-f $(find ros_reality_bridge)/urdf/right_end_effector.xacro -l right_hand -j right_gripper_base" />
--->
+
+<!-- <node name="left_gripper_urdf_update_node" pkg="baxter_examples" type="send_urdf_fragment.py" args="-f $(find ros_reality_bridge)/urdf/left_end_effector.xacro -l left_hand -j left_gripper_base" />
+<node name="right_gripper_urdf_update_node" pkg="baxter_examples" type="send_urdf_fragment.py" args="-f $(find ros_reality_bridge)/urdf/right_end_effector.xacro -l right_hand -j right_gripper_base" /> -->
+
 
 <!-- start navigation -->
 <include file="$(find fetch_navigation)/launch/fetch_nav.launch" >
     <arg name="map_file" value="$(find fetch_gazebo_demo)/maps/test_zone.yaml" />
+    <!-- <arg name="map_file" value="$(find fetch_maps)/maps/9_16_15.yaml" /> -->
 </include>
 
 <!-- Start MoveIt -->
@@ -17,8 +18,8 @@
 </include>
 
 
-<node name="ros_reality_node" pkg="ros_reality_bridge" type="unityNode.py" />	
-<node name="ros_reality_ik_node" pkg="ros_reality_bridge" type="ik_interface.py" />
+<node name="ros_reality_node" pkg="ros_reality_bridge" type="unityNode.py" output="screen" />	
+<node name="ros_reality_ik_node" pkg="ros_reality_bridge" type="ik_interface.py" output="screen" />
 
 
 <!--

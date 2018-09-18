@@ -3,7 +3,7 @@
 from threading import Lock
 import rospy
 import actionlib
-from control_msgs.msg import GripperCommandAction, GripperCommandGoal
+from control_msgs.msg import GripperCommandAction, GripperCommandGoal, PointHeadAction, PointHeadGoal
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from sensor_msgs.msg import JointState
 from tf import TransformListener, transformations
@@ -14,12 +14,13 @@ import geometry_msgs.msg
 from moveit_python import MoveGroupInterface, PlanningSceneInterface
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from moveit_msgs.msg import MoveItErrorCodes
+import moveit_commander
 
 
 class FetchController(object):
 
-    OPEN_POSITION = 0.1
-    CLOSED_POSITION = 0
+    OPEN_POSITION = 0.45
+    CLOSED_POSITION = 0.005
     MAP = "/map"
     BASE = "/base_link"
     ARM = "arm_with_torso"
@@ -35,16 +36,19 @@ class FetchController(object):
         self._sub_pos = rospy.Subscriber('joint_states', JointState, self.__set_state)
 
         # moveit setup
-        self.move_group = MoveGroupInterface(self.ARM, self.MAP)
+        self.move_group = MoveGroupInterface(self.ARM, self.BASE)
 
         # setup controller clients
         self.gripper_client = actionlib.SimpleActionClient('gripper_controller/gripper_action', GripperCommandAction)
         self.move_client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+        self.mgc_gripper = moveit_commander.MoveGroupCommander('gripper')
+        self.head_client = actionlib.SimpleActionClient("head_controller/point_head", PointHeadAction)  # For head tilt action
 
         # wait for clients
         rospy.loginfo('Waiting for controllers...')
         self.gripper_client.wait_for_server()
         self.move_client.wait_for_server()
+        self.head_client.wait_for_server()
         rospy.loginfo('connected to controllers.')
 
     def __del__(self):
@@ -59,7 +63,8 @@ class FetchController(object):
             if joint == 'r_gripper_finger_joint':
                 r_gripper_finger_pos = pos
         with self._lock:
-            self.position = l_gripper_finger_pos + r_gripper_finger_pos
+            if l_gripper_finger_pos is not None and r_gripper_finger_pos is not None:
+                self.position = l_gripper_finger_pos + r_gripper_finger_pos
 
     # move the gripper to an end goal. pos = [x,y,z] rot = [x,y,z,w]
     def __move_gripper(self, pos, rot):
@@ -75,7 +80,7 @@ class FetchController(object):
 
         gripper_frame = 'wrist_roll_link'
         gripper_pose_stamped = PoseStamped()
-        gripper_pose_stamped.header.frame_id = self.MAP
+        gripper_pose_stamped.header.frame_id = self.BASE
         gripper_pose_stamped.header.stamp = rospy.Time.now()
         gripper_pose_stamped.pose = pose
 
@@ -93,16 +98,37 @@ class FetchController(object):
 
     # set position of gripper
     def __set_position(self, position):
-        goal = GripperCommandGoal()
-        goal.command.max_effort = self.max_effort
-        goal.command.position = position
+        # goal = GripperCommandGoal()
+        # goal.command.max_effort = self.max_effort
+        # goal.command.position = position
 
-        self.gripper_client.send_goal(goal)
-        self.gripper_client.wait_for_result(rospy.Duration.from_sec(5.0))
-        res = self.gripper_client.get_result()
-        with self._lock:
-            self.position = res.position
+        # self.gripper_client.send_goal(goal)
+        # self.gripper_client.wait_for_result(rospy.Duration.from_sec(5.0))
+        # res = self.gripper_client.get_result()
+        # with self._lock:
+        #     self.position = res.position
 
+        self.mgc_gripper.set_joint_value_target([position]*2)
+        p = self.mgc_gripper.plan()
+        self.mgc_gripper.execute(p)
+
+    # Point the head towards a point = [x,y,z]
+    def __point_head(self, p):
+        goal = PointHeadGoal()
+        goal.target.header.stamp = rospy.Time.now()
+        goal.target.header.frame_id = self.BASE
+        
+        # set pose
+        goal.target.point.x = p[0]
+        goal.target.point.y = p[1]
+        goal.target.point.z = p[2]
+        goal.min_duration = rospy.Duration(1.0)
+
+        # execute and wait
+        self.head_client.send_goal(goal)
+        self.head_client.wait_for_result()
+        
+        
     # get transform of a frame relative to another
     def __get_transform(self, reference_frame, target_frame):
         translation_rotation = None
@@ -191,7 +217,7 @@ class FetchController(object):
 
         rospy.loginfo('Done rotating.')
 
-    # rotate to a specified angle
+    # rotate the specified frame to to a specified angle
     def rotate_to(self, quat):
         rospy.loginfo('Rotating...')
 
@@ -226,3 +252,7 @@ class FetchController(object):
         self.__move_gripper(pos, rot)
         rospy.loginfo('Gripper moved.')
 
+    def point_head(self, p):
+        rospy.loginfo('Pointing head...')
+        self.__point_head(p)
+        rospy.loginfo('Head pointed.')

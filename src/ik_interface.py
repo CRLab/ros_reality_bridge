@@ -26,6 +26,7 @@ class IKInterface():
         if split_msg is None or len(split_msg) == 0:
             rospy.logerr("Invalid message format")
 
+        # Parse the message type and execute accordingly
         request = split_msg[0]
 
         if request == "openGripper":
@@ -34,16 +35,12 @@ class IKInterface():
         elif request == "closeGripper":
             self.fetch.close()
 
-        elif request == "move":
-            coords = self.__get_coords(split_msg[1])
-            self.fetch.move(coords[0], coords[1])
+        elif request == "pointHead":
+            self.fetch.point_head(self.__get_coords(split_msg[1]))
 
         elif request == "moveTo":
             coords = self.__get_coords(split_msg[1])
             self.fetch.move_to(coords[0], coords[1])
-
-        elif request == "rotate":
-            self.fetch.rotate(float(split_msg[1]))
 
         elif request == "rotateTo":
             rot = self.__get_coords(split_msg[1])
