@@ -19,7 +19,7 @@ import moveit_commander
 
 class FetchController(object):
 
-    OPEN_POSITION = 0.45
+    OPEN_POSITION = 0.045
     CLOSED_POSITION = 0.005
     MAP = "/map"
     BASE = "/base_link"
@@ -46,7 +46,7 @@ class FetchController(object):
 
         # wait for clients
         rospy.loginfo('Waiting for controllers...')
-        self.gripper_client.wait_for_server()
+        #self.gripper_client.wait_for_server()
         self.move_client.wait_for_server()
         self.head_client.wait_for_server()
         rospy.loginfo('connected to controllers.')
@@ -67,7 +67,7 @@ class FetchController(object):
                 self.position = l_gripper_finger_pos + r_gripper_finger_pos
 
     # move the gripper to an end goal. pos = [x,y,z] rot = [x,y,z,w]
-    def __move_gripper(self, pos, rot):
+    def __move_gripper(self, pos, rot, frame):
         # create pose
         pose = geometry_msgs.msg.Pose()
         pose.orientation.x = rot[0]
@@ -80,9 +80,12 @@ class FetchController(object):
 
         gripper_frame = 'wrist_roll_link'
         gripper_pose_stamped = PoseStamped()
-        gripper_pose_stamped.header.frame_id = self.BASE
+        #gripper_pose_stamped.header.frame_id = self.BASE
+        gripper_pose_stamped.header.frame_id = frame
         gripper_pose_stamped.header.stamp = rospy.Time.now()
         gripper_pose_stamped.pose = pose
+
+        
 
         # Move gripper frame to the pose specified
         self.move_group.moveToPose(gripper_pose_stamped, gripper_frame)
@@ -233,6 +236,7 @@ class FetchController(object):
 
     def open(self):
         rospy.loginfo('Opening gripper...')
+        rospy.loginfo(self.OPEN_POSITION)
         self.__set_position(self.OPEN_POSITION)
         rospy.loginfo('Gripper open.')
 
@@ -249,7 +253,9 @@ class FetchController(object):
     # move the gripper to an end goal. pos = [x,y,z] rot = [x,y,z,w]
     def move_gripper(self, pos, rot):
         rospy.loginfo('Moving gripper...')
-        self.__move_gripper(pos, rot)
+
+        self.__move_gripper(pos, rot, self.BASE)
+
         rospy.loginfo('Gripper moved.')
 
     def point_head(self, p):
