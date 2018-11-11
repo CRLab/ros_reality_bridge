@@ -43,7 +43,7 @@ class IKInterface():
             self.fetch.move_to(coords[0], coords[1])
 
         elif request == "rotateTo":
-            rot = self.__get_coords(split_msg[1])
+            rot = self.__get_coords(split_msg[1]) 
             self.fetch.rotate_to(rot)
 
         elif request == "cancelMove":
@@ -53,6 +53,19 @@ class IKInterface():
             pos = self.__get_coords(split_msg[1])
             rot = self.__get_coords(split_msg[2])
             self.fetch.move_gripper(pos, rot)
+
+        elif request == "move":
+            self.fetch.move(0.1,1)
+
+        elif request == "rotate":
+            self.fetch.rotate(1,1)
+        elif request == "directMove":
+            t = 0.05
+            v,w = self.__get_coords(split_msg[1])
+            v=v/4.0
+            w=w/4.0
+            self.fetch.move(t,v, -w)
+
 
 
 if __name__ == '__main__':

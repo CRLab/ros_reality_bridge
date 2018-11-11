@@ -16,6 +16,9 @@ from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from moveit_msgs.msg import MoveItErrorCodes
 import moveit_commander
 
+from geometry_msgs.msg import Twist
+import time
+
 
 class FetchController(object):
 
@@ -50,6 +53,9 @@ class FetchController(object):
         self.move_client.wait_for_server()
         self.head_client.wait_for_server()
         rospy.loginfo('connected to controllers.')
+
+        #for publishing command to the robot's wheel
+        self.pub_wheel = rospy.Publisher('cmd_vel', Twist, queue_size=1)
 
     def __del__(self):
         self.move_group.get_move_action().cancel_all_goals()    # cancel moveit goals
@@ -189,18 +195,55 @@ class FetchController(object):
 
         return new_trans, quat_rot
 
+    # given time, speed, move the robot
+    def wheel_control(self,duration, linear_speed, angular_speed):
+        tw = Twist()
+        tw.linear.x = linear_speed
+        tw.angular.z = angular_speed
+
+        start_time = time.time()
+        while (time.time()-start_time) <= duration:
+            self.pub_wheel.publish(tw)
+
     ###################################################################################################################
     # PUBLIC
     ###################################################################################################################
 
-    # move relative to current position
-    def move(self, x, y):
+
+
+    # # move relative to current position
+    # def move(self, x, y):
+    #     rospy.loginfo('Moving...')
+
+    #     trans, rot = self.__combine_pose([x, y, 0], [0, 0, 0], self.BASE)
+    #     self.__move_to(trans, rot, self.BASE)
+
+    #     rospy.loginfo('Done moving.')
+
+    # # rotate by theta
+    # def rotate(self, theta):
+    #     rospy.loginfo('Rotating...')
+
+    #     trans, rot = self.__combine_pose([0, 0, 0], [0, 0, theta], self.BASE)
+    #     self.__move_to(trans, rot, self.BASE)
+
+    #     rospy.loginfo('Done rotating.')
+
+    #move the robot based on velocity and theta
+    #(will this go through speed limit checking?)
+    def move(self, t, v, w):
         rospy.loginfo('Moving...')
-
-        trans, rot = self.__combine_pose([x, y, 0], [0, 0, 0], self.BASE)
-        self.__move_to(trans, rot, self.BASE)
-
+        self.wheel_control(t, v, w)
         rospy.loginfo('Done moving.')
+
+    # rotate the robot
+    # haven't been tested
+    def rotate(self, t, w):
+        rospy.loginfo('Rotating...')
+
+        self.wheel_control(t, 0, w)
+
+        rospy.loginfo('Done rotating.')
 
     # move to a given location on the map
     def move_to(self, x, y):
@@ -209,16 +252,7 @@ class FetchController(object):
         rot = transformations.quaternion_from_euler(0, 0, 0)
         self.__move_to([x, y, 0], rot, self.MAP)
 
-        rospy.loginfo('Done moving.')
-
-    # rotate by theta
-    def rotate(self, theta):
-        rospy.loginfo('Rotating...')
-
-        trans, rot = self.__combine_pose([0, 0, 0], [0, 0, theta], self.BASE)
-        self.__move_to(trans, rot, self.BASE)
-
-        rospy.loginfo('Done rotating.')
+        rospy.loginfo('Done moving.') 
 
     # rotate the specified frame to to a specified angle
     def rotate_to(self, quat):

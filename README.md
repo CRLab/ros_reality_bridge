@@ -26,6 +26,8 @@ To start ROS Reality, simply run the following command on your Baxter workstatio
 
 Great, now this computer is sending information about the ROS network. Go to your Unity computer and follow the intstructions here: https://github.com/h2r/ROS_Unity
 
+
+
 Running map:
 roslaunch fetch_navigation fetch_nav.launch map_file:=/home/tim/ros/grasp_ws/robot_ws/src/robot_mapping/maps/crlab2.yaml 
 
