@@ -58,6 +58,7 @@ add_message_files(
 add_service_files(
    FILES
    PlanGrasp.srv
+   ExecuteGrasp.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -71,7 +72,6 @@ add_service_files(
 generate_messages(
   DEPENDENCIES
   ## baxter_core_msgs
-  std_msgs
   geometry_msgs
   shape_msgs
   sensor_msgs
