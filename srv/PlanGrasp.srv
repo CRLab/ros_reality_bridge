@@ -1,0 +1,4 @@
+int64 mesh_index
+---
+std_msgs/Bool success
+sensor_msgs/JointState planned_grasp_state

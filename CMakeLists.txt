@@ -55,11 +55,10 @@ add_message_files(
 )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+   FILES
+   PlanGrasp.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -75,6 +74,7 @@ generate_messages(
   std_msgs
   geometry_msgs
   shape_msgs
+  sensor_msgs
 )
 
 ################################################
