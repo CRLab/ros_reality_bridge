@@ -33,3 +33,13 @@ roslaunch fetch_navigation fetch_nav.launch map_file:=/home/tim/ros/grasp_ws/rob
 
 Moving repo:
 https://github.com/CRLab?utf8=%E2%9C%93&q=curp&type=&language=
+
+## Building ROS package
+
+```bash
+mkdir -p $HOME/ros/ros_reality_ws/src
+ln -s <path/to/ros_reality_bridge> $HOME/ros/ros_reality_ws/src/ros_reality_bridge
+cd $HOME/ros/ros_reality_ws
+source /opt/ros/kinetic/setup.bash
+catkin build
+```
