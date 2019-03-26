@@ -75,6 +75,7 @@ generate_messages(
   geometry_msgs
   shape_msgs
   sensor_msgs
+  std_msgs
 )
 
 ################################################
