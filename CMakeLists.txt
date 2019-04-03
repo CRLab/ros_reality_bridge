@@ -59,6 +59,7 @@ add_service_files(
    FILES
    PlanGrasp.srv
    ExecuteGrasp.srv
+   GetObjectMesh.srv
 )
 
 ## Generate actions in the 'action' folder
